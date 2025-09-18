@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Paradigm Project | ESG Consulting</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* Custom styles to integrate with Tailwind and Three.js */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0a0a0a; /* Dark background for the scene */
+            color: #f0f0f0;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+        }
+
+        #bg-canvas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;
+        }
+
+        .content-container, #articles-page {
+            position: relative; z-index: 1; transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        }
+
+        .card {
+            background: rgba(10, 10, 10, 0.6); backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s ease-out, box-shadow 0.3s ease; transform-style: preserve-3d; 
+        }
+        .card:hover { box-shadow: 0 0 25px rgba(0, 150, 255, 0.2); }
+
+        .scroll-animate { opacity: 0; transform: translateY(30px); transition: opacity 0.8s ease-out, transform 0.8s ease-out; }
+        .scroll-animate.visible { opacity: 1; transform: translateY(0); }
+        
+        nav a { position: relative; padding-bottom: 4px; }
+        nav a::after {
+            content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px;
+            background-color: #22d3ee; transform: scaleX(0); transform-origin: bottom right;
+            transition: transform 0.3s ease-out;
+        }
+        nav a:hover::after { transform: scaleX(1); transform-origin: bottom left; }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(22, 163, 74, 0.3), 0 0 10px rgba(56, 189, 248, 0.2); }
+            50% { box-shadow: 0 0 35px rgba(22, 163, 74, 0.5), 0 0 20px rgba(56, 189, 248, 0.4); }
+        }
+        .cta-button { animation: pulse 3s infinite; }
+        
+        .hero-title span { display: inline-block; opacity: 0; transform: translateY(20px) scale(0.9); animation: fadeInLetter 0.8s forwards; }
+        @keyframes fadeInLetter { to { opacity: 1; transform: translateY(0) scale(1); } }
+        
+        @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        header { animation: slideDown 0.8s ease-out 0.5s backwards; }
+        
+        .team-member img { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .team-member:hover img { transform: scale(1.05); box-shadow: 0 0 30px rgba(45, 212, 191, 0.4); }
+        .client-logo { filter: grayscale(100%) brightness(0.8); transition: all 0.3s ease; }
+        .client-logo:hover { filter: grayscale(0%) brightness(1); transform: scale(1.1); }
+        
+        #articles-page {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+            overflow-y: auto; z-index: 100;
+        }
+
+        .article-card {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
+            transform-style: preserve-3d; transition: all 0.3s ease; cursor: pointer;
+        }
+        .article-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4), 0 0 20px rgba(45, 212, 191, 0.3);
+        }
+        .article-card img { transition: transform 0.3s ease; }
+        .article-card:hover img { transform: scale(1.1); }
+        
+        #article-modal { transition: opacity 0.3s ease-in-out; }
+        #modal-content { transition: transform 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Main content container that scrolls over the canvas -->
+    <div class="content-container">
+        
+        <header class="fixed top-0 left-0 w-full p-6 flex justify-between items-center z-20 bg-black bg-opacity-30 backdrop-blur-sm">
+            <a href="#home" class="logo-link">
+                <!-- <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="TPP_Logo.svg">
+                    <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+                    <path d="M2 7L12 12M12 22V12M22 7L12 12M17 4.5L7 9.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg> -->
+                <img width="100" height="40" viewBox="0 0 24 24" src="TPP_Logo.svg" alt="Logo">
+            </a>
+            <nav class="hidden md:flex space-x-8 text-sm uppercase tracking-widest">
+                <a href="#about" class="transition-colors nav-link">About</a>
+                <a href="#goals" class="transition-colors nav-link">Goals</a>
+                <a href="#team" class="transition-colors nav-link">Team</a>
+                <a href="#articles" class="transition-colors nav-link">Articles</a>
+                <a href="#contact" class="transition-colors nav-link">Contact</a>
+            </nav>
+        </header>
+
+        <main id="main-content">
+            <!-- Hero Section -->
+            <section id="home" class="h-screen flex flex-col justify-center items-center text-center px-4">
+                <h2 class="hero-title text-5xl md:text-7xl font-extrabold leading-tight tracking-wide"></h2>
+                <p class="mt-6 text-xl text-gray-300 max-w-3xl scroll-animate">
+                    We are The Paradigm Project. We guide businesses through the complexities of ESG to unlock sustainable growth and lasting impact.
+                </p>
+                <a href="#goals" class="cta-button mt-12 px-8 py-4 bg-cyan-500 hover:bg-cyan-400 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 scroll-animate">
+                    Explore Our Solutions
+                </a>
+            </section>
+
+            <!-- About Section -->
+            <section id="about" class="py-24 px-6 scroll-animate">
+                <div class="max-w-4xl mx-auto text-center">
+                    <h3 class="text-4xl font-bold mb-4">Redefining Corporate Responsibility</h3>
+                    <p class="text-lg text-gray-300">
+                        The Paradigm Project was founded on the belief that purpose and profit can coexist. We partner with forward-thinking organizations to integrate Environmental, Social, and Governance (ESG) principles into their core strategies. Our data-driven approach transforms challenges into opportunities, creating value for your company, your stakeholders, and our planet.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Goals Section (formerly Services) -->
+            <section id="goals" class="py-24 px-6">
+                <div class="max-w-6xl mx-auto">
+                    <h3 class="text-4xl font-bold text-center mb-12 scroll-animate">Our Goals</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div class="card p-8 rounded-2xl scroll-animate">
+                            <h4 class="text-2xl font-semibold mb-3 text-green-400">Environmental Stewardship</h4>
+                            <p class="text-gray-300">
+                                Guide partners to develop robust strategies for decarbonization, circular economy implementation, and biodiversity protection.
+                            </p>
+                        </div>
+                        <div class="card p-8 rounded-2xl scroll-animate" style="transition-delay: 200ms;">
+                            <h4 class="text-2xl font-semibold mb-3 text-blue-400">Positive Social Impact</h4>
+                            <p class="text-gray-300">
+                                Help enhance social license through supply chain transparency, diversity & inclusion initiatives, and impactful community programs.
+                            </p>
+                        </div>
+                        <div class="card p-8 rounded-2xl scroll-animate" style="transition-delay: 400ms;">
+                            <h4 class="text-2xl font-semibold mb-3 text-purple-400">Ethical Governance</h4>
+                            <p class="text-gray-300">
+                                Strengthen organizations with ethical governance structures, transparent reporting (GRI, SASB), and effective stakeholder communication.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+             <!-- Team Section -->
+            <section id="team" class="py-24 px-6 bg-black bg-opacity-20">
+                <div class="max-w-7xl mx-auto">
+                    <h3 class="text-4xl font-bold text-center mb-12 scroll-animate">Meet the Team</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 text-center">
+                        <div class="team-member scroll-animate">
+                            <img src="https://media.licdn.com/dms/image/v2/D4D03AQFdYbTu5t1eIQ/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1725534405180?e=1760572800&v=beta&t=SseF9ssifaKwen2TDcu9O0AovXtKlmPlpSAtDlpLrNQ" alt="Aaditya Goyal" class="w-40 h-40 rounded-full mx-auto mb-4 border-4 border-gray-700">
+                            <h4 class="text-2xl font-semibold">Aaditya Goyal</h4>
+                            <p class="text-cyan-400 mb-2">Founding President</p>
+                            <!-- <p class="text-gray-400 max-w-sm mx-auto"></p> -->
+                        </div>
+                        <div class="team-member scroll-animate" style="transition-delay: 200ms;">
+                            <img src="https://media.licdn.com/dms/image/v2/D5603AQFck35WBokieg/profile-displayphoto-shrink_400_400/B56ZYwNnn.HEAg-/0/1744565599645?e=1760572800&v=beta&t=1Q4Kq2jFUZ9LLkFbaT9oCWZiP4as6WjWPwB0x1gT0xI" alt="Aaditya Goyal" class="w-40 h-40 rounded-full mx-auto mb-4 border-4 border-gray-700">
+                            <h4 class="text-2xl font-semibold">Ashish Kohli</h4>
+                            <p class="text-cyan-400 mb-2">Founding President</p>
+                            <!-- <p class="text-gray-400 max-w-sm mx-auto">A former human rights lawyer, Elara specializes in ethical supply chains, corporate governance, and stakeholder engagement.</p> -->
+                        </div>
+                        <div class="team-member scroll-animate" style="transition-delay: 400ms;">
+                            <img src="https://media.licdn.com/dms/image/v2/D4D03AQFs6Grd6zCrqw/profile-displayphoto-shrink_400_400/B4DZVsXObzHkAk-/0/1741279783640?e=1760572800&v=beta&t=BbEP_Rck3llHYCj0WGiauqFb2wNAlPEPxTQn4LlI-4g" alt="Dhwani" class="w-40 h-40 rounded-full mx-auto mb-4 border-4 border-gray-700">
+                            <h4 class="text-2xl font-semibold">Dhwani</h4>
+                            <p class="text-cyan-400 mb-2">Founding President</p>
+                            <!-- <p class="text-gray-400 max-w-sm mx-auto">A data scientist with a passion for sustainability, Kenji leverages AI to translate complex ESG data into actionable insights.</p> -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+             <!-- Clients Section -->
+            <section id="clients" class="py-20">
+                <div class="max-w-5xl mx-auto text-center">
+                    <h3 class="text-3xl font-bold mb-10 scroll-animate">Trusted By Industry Leaders</h3>
+                    <div class="flex flex-wrap justify-center items-center gap-x-16 gap-y-8" >
+                        <img src="Paisalo_client.png" alt="Client Logo 1" class="client-logo h-12 scroll-animate">
+                        <img src="Exponent_client.jpeg" alt="Client Logo 2" class="client-logo h-12 scroll-animate" style="transition-delay: 200ms;">
+                    </div>
+                </div>
+            </section>
+            
+            <section id="contact" class="py-32 text-center px-6 scroll-animate">
+                 <div class="max-w-3xl mx-auto">
+                    <h3 class="text-4xl font-bold mb-4">Ready to Start a New Paradigm?</h3>
+                    <p class="text-xl text-gray-300 mb-8">
+                        Let's collaborate to build a more resilient and responsible business.
+                    </p>
+                    <button class="cta-button px-10 py-4 bg-cyan-500 hover:bg-cyan-400 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg shadow-cyan-500/20">
+                        Contact Us
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <footer class="text-center py-8 border-t border-gray-800">
+            <p>&copy; 2025 The Paradigm Project. All Rights Reserved.</p>
+        </footer>
+    </div>
+
+    <!-- Articles Page -->
+    <div id="articles-page" class="hidden opacity-0 -translate-y-full">
+        <div class="max-w-7xl mx-auto px-6 py-24">
+            <button id="back-to-main" class="mb-12 text-cyan-400 font-bold">&larr; Back to Home</button>
+            <h2 class="text-5xl font-extrabold text-center mb-16">Latest Insights & Articles</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                <!-- Article Card 1 -->
+                <div class="article-card rounded-xl overflow-hidden group">
+                    <div class="overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1600" class="w-full h-56 object-cover" alt="Article Image 1">
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm text-cyan-400 mb-2">REPORT</p>
+                        <h1 class="text-xl font-bold mb-4">How ESG Reporting Standards (IFRS S1 & S2, CSRD) Impact Indian Businesses in 2025</h1>
+                        <!-- <div > -->
+                        <p class="text-gray-400 hidden">The convergence of global ESG reporting standards with India's evolving sustainability framework is creating significant compliance challenges and opportunities for Indian businesses. While India maintains its own Business Responsibility and Sustainability Reporting (BRSR) framework, the influence of international standards like IFRS S1 & S2 and the EU's Corporate Sustainability Reporting Directive (CSRD) is reshaping corporate disclosure practices across sectors.</p>
+
+                        <h2 class="text-gray-400 hidden">Current ESG Regulatory Landscape in India</h2>
+
+                        <p class="text-gray-400 hidden">India's ESG reporting framework is primarily governed by the Securities and Exchange Board of India (SEBI) through the BRSR mandate, which requires the top 1,000 listed companies by market capitalization to report on environmental, social, and governance metrics. This framework has been gradually expanding, with discussions around extending requirements to smaller listed entities and eventual adoption of international standards.</p>
+
+                        <p class="text-gray-400 hidden">The Ministry of Corporate Affairs (MCA) has been actively engaging with global standard-setters to evaluate the integration of international frameworks with existing Indian regulations. This alignment process aims to reduce reporting burden while maintaining compliance with both domestic and international investor expectations.</p>
+
+                        <h2 class="text-gray-400 hidden">IFRS S1 & S2: Global Sustainability Disclosure Standards</h2>
+
+                        <p class="text-gray-400 hidden">IFRS S1 (General Requirements for Disclosure of Sustainability-related Financial Information) establishes the foundation for sustainability disclosures, requiring companies to provide material information about sustainability-related risks and opportunities that could affect cash flows, financing access, or cost of capital over the short, medium, and long term.</p>
+
+                        <p class="text-gray-400 hidden">IFRS S2 (Climate-related Disclosures) specifically addresses climate-related risks and opportunities, mandating detailed disclosures about governance, strategy, risk management, and metrics and targets related to climate change. This standard requires companies to disclose Scope 1, 2, and 3 greenhouse gas emissions, creating significant data collection and verification challenges.</p>
+
+                        <h2 class="text-gray-400 hidden">Implementation Timeline and Indian Adoption</h2>
+
+                        <p class="text-gray-400 hidden">While IFRS S1 and S2 became effective globally from January 1, 2024, India has not yet mandated their adoption. However, many Indian multinational corporations with international operations or foreign investors are voluntarily adopting these standards to maintain global competitiveness and access to international capital markets.</p>
+
+                        <p class="text-gray-400 hidden">The Institute of Chartered Accountants of India (ICAI) has been conducting capacity-building programs to prepare Indian companies and professionals for eventual adoption. Industry experts anticipate that formal adoption could occur within the next 2-3 years, likely through a phased approach starting with large listed companies.</p>
+
+                        <h2 class="text-gray-400 hidden">CSRD: European Union's Comprehensive Framework</h2>
+
+                        <p class="text-gray-400 hidden">The Corporate Sustainability Reporting Directive (CSRD) represents one of the most comprehensive ESG reporting frameworks globally, requiring detailed disclosures across environmental, social, and governance dimensions. While primarily applicable to EU companies, the CSRD significantly impacts Indian businesses through several channels:</p>
+
+                        <h3 class="text-gray-400 hidden">Direct Impact on Indian Companies</h3>
+                        <ul class="text-gray-400 hidden">
+                            <li class="text-gray-400 hidden">EU Subsidiaries: Indian companies with significant EU operations or subsidiaries must comply with CSRD requirements.</li>
+                            <li class="text-gray-400 hidden">Supply Chain Requirements: Indian suppliers to EU companies face increased due diligence and sustainability reporting demands.</li>
+                            <li class="text-gray-400 hidden">Financial Services: Indian companies seeking EU financing or listing on European exchanges must meet CSRD-aligned disclosure standards.</li>
+                        </ul >
+
+                        <h3 class="text-gray-400 hidden">Value Chain Implications</h3>
+
+                        <p class="text-gray-400 hidden">The CSRD's emphasis on value chain sustainability creates ripple effects throughout global supply chains. Indian manufacturers, particularly in textiles, pharmaceuticals, automotive, and technology sectors, are experiencing increased pressure from EU customers to provide detailed sustainability data and demonstrate compliance with environmental and social standards.</p>
+
+                        <h2 class="text-gray-400 hidden">Sector-Specific Impacts on Indian Businesses</h2>
+
+                        <h3 class="text-gray-400 hidden">Financial Services and Banking</h3>
+                        <p class="text-gray-400 hidden">Indian banks and financial institutions are facing heightened scrutiny regarding ESG integration in lending and investment decisions. The Reserve Bank of India (RBI) has been developing guidelines for climate risk disclosures, partially aligned with international standards. Key impacts include:</p>
+                        <ul class="text-gray-400 hidden">
+                            <li class="text-gray-400 hidden">Enhanced Due Diligence: Banks must assess and disclose climate-related risks in their loan portfolios.</li>
+                            <li class="text-gray-400 hidden">Green Finance Reporting: Detailed tracking and reporting of sustainable finance products and their impact.</li>
+                            <li class="text-gray-400 hidden">Stress Testing: Implementation of climate scenario analysis for portfolio risk assessment.</li>
+                        </ul>
+
+                        <h3 class="text-gray-400 hidden">Manufacturing and Heavy Industries</h3>
+                        <p class="text-gray-400 hidden">India's manufacturing sector, particularly steel, cement, chemicals, and automotive industries, faces significant challenges in meeting international ESG disclosure requirements:</p>
+                        <ul class="text-gray-400 hidden">
+                            <li class="text-gray-400 hidden">Carbon Intensity Reporting: Mandatory disclosure of Scope 1, 2, and 3 emissions with verification requirements.</li>
+                            <li class="text-gray-400 hidden">Water and Waste Management: Comprehensive reporting on resource consumption and waste generation.</li>
+                            <li class="text-gray-400 hidden">Supply Chain Transparency: Enhanced due diligence and reporting on supplier sustainability practices.</li>
+                        </ul>
+
+                        <h3 class="text-gray-400 hidden">Information Technology and Services</h3>
+                        <p class="text-gray-400 hidden">The Indian IT sector, with its global client base, is increasingly aligning with international ESG standards:</p>
+                        <ul class="text-gray-400 hidden">
+                            <li class="text-gray-400 hidden">Digital Carbon Footprint: Reporting on energy consumption of data centers and digital infrastructure.</li>
+                            <li class="text-gray-400 hidden">Diversity and Inclusion: Enhanced disclosure requirements on workforce diversity and inclusion metrics.</li>
+                            <li class="text-gray-400 hidden">Cybersecurity and Data Privacy: Integration of governance-related disclosures with sustainability reporting.</li>
+                        </ul>
+
+                        <h2 class="text-gray-400 hidden">Implementation Challenges for Indian Businesses</h2>
+
+                        <h3 class="text-gray-400 hidden">Data Collection and Management</h3>
+                        <ul class="text-gray-400 hidden">
+                            <li class="text-gray-400 hidden">Infrastructure Limitations: Many Indian companies lack sophisticated data collection systems for ESG metrics.</li>
+                            <li class="text-gray-400 hidden">Third-Party Verification: Limited availability of qualified ESG auditors and verification services in India.</li>
+                            <li class="text-gray-400 hidden">Supply Chain Data: Difficulty in obtaining reliable sustainability data from suppliers, particularly smaller vendors.</li>
+                        </ul>
+
+                        <h3 class="text-gray-400 hidden">Cost and Resource Implications</h3>
+                        <ul class="text-gray-400 hidden">
+                            <li class="text-gray-400 hidden">Technology Infrastructure: Investment in ESG data management platforms and reporting tools.</li>
+                            <li class="text-gray-400 hidden">Human Resources: Training existing staff and hiring ESG specialists.</li>
+                            <li class="text-gray-400 hidden">External Services: Engaging consultants, auditors, and rating agencies for compliance and verification.</li>
+                        </ul>
+
+                        <h3 class="text-gray-400 hidden">Regulatory Alignment</h3>
+                        <ul class="text-gray-400 hidden">
+                            <li class="text-gray-400 hidden">Dual Compliance: Meeting both BRSR requirements and international standards.</li>
+                            <li class="text-gray-400 hidden">Timing Misalignment: Different reporting cycles and deadlines across frameworks.</li>
+                            <li class="text-gray-400 hidden">Standard Evolution: Keeping pace with evolving international standards while maintaining domestic compliance.</li>
+                        </ul>
+
+                        <h2 class="text-gray-400 hidden">Strategic Opportunities and Business Benefits</h2>
+
+                        <h3 class="text-gray-400 hidden">Access to International Capital</h3>
+                        <p class="text-gray-400 hidden">Companies demonstrating strong ESG performance and comprehensive reporting are accessing preferential financing terms and broader investor bases. International institutional investors increasingly use ESG criteria for investment decisions, making robust reporting a competitive advantage.</p>
+
+                        <h3 class="text-gray-400 hidden">Operational Efficiency</h3>
+                        <p class="text-gray-400 hidden">ESG reporting initiatives often identify operational inefficiencies and cost-saving opportunities:</p>
+                        <ul class="text-gray-400 hidden">
+                            <li class="text-gray-400 hidden">Energy Management: Improved tracking leading to reduced energy consumption and costs.</li>
+                            <li class="text-gray-400 hidden">Waste Reduction: Enhanced monitoring resulting in material cost savings and operational efficiency.</li>
+                            <li class="text-gray-400 hidden">Risk Management: Better identification and mitigation of environmental and social risks.</li>
+                        </ul>
+
+                        <h3 class="text-gray-400 hidden">Market Differentiation</h3>
+                        <p class="text-gray-400 hidden">Strong ESG performance and transparent reporting enhance brand value and market positioning, particularly important for Indian companies seeking to expand globally or attract conscious consumers.</p>
+
+                        <h2 class="text-gray-400 hidden">Preparation Strategies for Indian Businesses</h2>
+
+                        <h3 class="text-gray-400 hidden">Immediate Actions</h3>
+                        <ul class="text-gray-400 hidden">
+                            <li class="text-gray-400 hidden">Gap Analysis: Conduct comprehensive assessment of current ESG reporting capabilities against international standards.</li>
+                            <li class="text-gray-400 hidden">Data Systems: Invest in robust ESG data collection and management systems.</li>
+                            <li class="text-gray-400 hidden">Stakeholder Engagement: Establish clear communication channels with investors, customers, and regulators regarding ESG strategy.</li>
+                        </ul>
+
+                        <h3 class="text-gray-400 hidden">Medium-term Planning</h3>
+                        <ul class="text-gray-400 hidden">
+                            <li class="text-gray-400 hidden">Standard Alignment: Gradually align existing BRSR reporting with IFRS S1 & S2 requirements.</li>
+                            <li class="text-gray-400 hidden">Supply Chain Integration: Develop supplier sustainability programs and data collection mechanisms.</li>
+                            <li class="text-gray-400 hidden">Capacity Building: Invest in training and development of ESG expertise within the organization.</li>
+                        </ul>
+
+                        <h3 class="text-gray-400 hidden">Long-term Strategic Integration</h3>
+                        <ul class="text-gray-400 hidden">
+                            <li class="text-gray-400 hidden">Business Strategy Alignment: Integrate ESG considerations into core business strategy and decision-making processes.</li>
+                            <li class="text-gray-400 hidden">Innovation Focus: Develop products and services that address sustainability challenges.</li>
+                            <li class="text-gray-400 hidden">Stakeholder Value Creation: Use ESG performance as a driver of long-term stakeholder value creation.</li>
+                        </ul>
+
+                        <p class="text-gray-400 hidden">The evolution of ESG reporting standards represents both a significant compliance challenge and a strategic opportunity for Indian businesses. Companies that proactively prepare for international standard adoption while maintaining excellence in domestic reporting requirements will be best positioned to thrive in the evolving global business environment. Success will require substantial investment in data infrastructure, human capital development, and strategic integration of sustainability considerations into core business operations.</p>
+                        <!-- </div> -->
+                    </div>
+                </div>
+                <!-- Article Card 2 -->
+                 <div class="article-card rounded-xl overflow-hidden group">
+                    <div class="overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1582522438873-a2a0a1a8c876?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1600" class="w-full h-56 object-cover" alt="Article Image 2">
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm text-cyan-400 mb-2">CASE STUDY</p>
+                        <h3 class="text-xl font-bold mb-4">Circular Economy in Action: A Client Success Story</h3>
+                        <p class="text-gray-400 hidden">How we partnered with Aether Industries to redesign their supply chain, reducing waste by 40% and unlocking new revenue streams. This case study details the five-step process we implemented, from initial material flow analysis to the development of a product-as-a-service model. We'll show you the data behind the success, including a 25% reduction in raw material costs and a significant increase in customer loyalty.</p>
+                    </div>
+                </div>
+                <!-- Article Card 3 -->
+                 <div class="article-card rounded-xl overflow-hidden group">
+                    <div class="overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1509099836639-18ba1795216d?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1600" class="w-full h-56 object-cover" alt="Article Image 3">
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm text-cyan-400 mb-2">ANALYSIS</p>
+                        <h3 class="text-xl font-bold mb-4">The 'S' in ESG: Why Social Metrics Are Your Biggest Untapped Asset</h3>
+                        <p class="text-gray-400 hidden">Beyond philanthropy: A deep dive into how investing in social initiatives drives employee retention, brand loyalty, and long-term value. This analysis examines the correlation between high social scores and financial outperformance, citing recent studies from leading academic institutions. We provide a framework for identifying and measuring the social metrics that matter most to your specific industry and stakeholders.</p>
+                    </div>
+                </div>
+                <!-- Article Card 1 -->
+                <div class="article-card rounded-xl overflow-hidden group">
+                    <div class="overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1600" class="w-full h-56 object-cover" alt="Article Image 1">
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm text-cyan-400 mb-2">REPORT</p>
+                        <h3 class="text-xl font-bold mb-4">The Future of ESG: 2025 Trends Report</h3>
+                        <p class="text-gray-400 hidden">An in-depth look at the upcoming shifts in regulation, technology, and investor expectations that will shape the ESG landscape. This report covers key areas such as mandatory climate disclosures, the rise of nature-related financial disclosures (TNFD), and the growing importance of Scope 3 emissions tracking. We also explore how AI and machine learning are being leveraged to analyze complex ESG data sets, providing companies with unprecedented insights into their sustainability performance.</p>
+                    </div>
+                </div>
+                <!-- Article Card 2 -->
+                 <div class="article-card rounded-xl overflow-hidden group">
+                    <div class="overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1582522438873-a2a0a1a8c876?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1600" class="w-full h-56 object-cover" alt="Article Image 2">
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm text-cyan-400 mb-2">CASE STUDY</p>
+                        <h3 class="text-xl font-bold mb-4">Circular Economy in Action: A Client Success Story</h3>
+                        <p class="text-gray-400 hidden">How we partnered with Aether Industries to redesign their supply chain, reducing waste by 40% and unlocking new revenue streams. This case study details the five-step process we implemented, from initial material flow analysis to the development of a product-as-a-service model. We'll show you the data behind the success, including a 25% reduction in raw material costs and a significant increase in customer loyalty.</p>
+                    </div>
+                </div>
+                <!-- Article Card 3 -->
+                 <div class="article-card rounded-xl overflow-hidden group">
+                    <div class="overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1509099836639-18ba1795216d?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1600" class="w-full h-56 object-cover" alt="Article Image 3">
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm text-cyan-400 mb-2">ANALYSIS</p>
+                        <h3 class="text-xl font-bold mb-4">The 'S' in ESG: Why Social Metrics Are Your Biggest Untapped Asset</h3>
+                        <p class="text-gray-400 hidden">Beyond philanthropy: A deep dive into how investing in social initiatives drives employee retention, brand loyalty, and long-term value. This analysis examines the correlation between high social scores and financial outperformance, citing recent studies from leading academic institutions. We provide a framework for identifying and measuring the social metrics that matter most to your specific industry and stakeholders.</p>
+                    </div>
+                </div>
+                <!-- Article Card 1 -->
+                <div class="article-card rounded-xl overflow-hidden group">
+                    <div class="overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1600" class="w-full h-56 object-cover" alt="Article Image 1">
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm text-cyan-400 mb-2">REPORT</p>
+                        <h3 class="text-xl font-bold mb-4">The Future of ESG: 2025 Trends Report</h3>
+                        <p class="text-gray-400 hidden">An in-depth look at the upcoming shifts in regulation, technology, and investor expectations that will shape the ESG landscape. This report covers key areas such as mandatory climate disclosures, the rise of nature-related financial disclosures (TNFD), and the growing importance of Scope 3 emissions tracking. We also explore how AI and machine learning are being leveraged to analyze complex ESG data sets, providing companies with unprecedented insights into their sustainability performance.</p>
+                    </div>
+                </div>
+                <!-- Article Card 2 -->
+                 <div class="article-card rounded-xl overflow-hidden group">
+                    <div class="overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1582522438873-a2a0a1a8c876?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1600" class="w-full h-56 object-cover" alt="Article Image 2">
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm text-cyan-400 mb-2">CASE STUDY</p>
+                        <h3 class="text-xl font-bold mb-4">Circular Economy in Action: A Client Success Story</h3>
+                        <p class="text-gray-400 hidden">How we partnered with Aether Industries to redesign their supply chain, reducing waste by 40% and unlocking new revenue streams. This case study details the five-step process we implemented, from initial material flow analysis to the development of a product-as-a-service model. We'll show you the data behind the success, including a 25% reduction in raw material costs and a significant increase in customer loyalty.</p>
+                    </div>
+                </div>
+                <!-- Article Card 3 -->
+                 <div class="article-card rounded-xl overflow-hidden group">
+                    <div class="overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1509099836639-18ba1795216d?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1600" class="w-full h-56 object-cover" alt="Article Image 3">
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm text-cyan-400 mb-2">ANALYSIS</p>
+                        <h3 class="text-xl font-bold mb-4">The 'S' in ESG: Why Social Metrics Are Your Biggest Untapped Asset</h3>
+                        <p class="text-gray-400 hidden">Beyond philanthropy: A deep dive into how investing in social initiatives drives employee retention, brand loyalty, and long-term value. This analysis examines the correlation between high social scores and financial outperformance, citing recent studies from leading academic institutions. We provide a framework for identifying and measuring the social metrics that matter most to your specific industry and stakeholders.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Article Modal -->
+    <div id="article-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 z-[110] flex justify-center items-center p-4 opacity-0">
+        <div id="modal-content" class="bg-gray-900 border border-gray-700 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8 relative transform scale-95">
+            <button id="modal-close-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white text-4xl leading-none">&times;</button>
+            <img id="modal-image" src="" alt="Article Image" class="w-full h-64 object-cover rounded-md mb-6">
+            <h3 id="modal-title" class="text-3xl font-bold mb-4 text-cyan-300"></h3>
+            <div id="modal-text" class="text-gray-300 prose prose-invert max-w-none"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <script type="module">
+        // --- 3D Animation ---
+        if (typeof THREE !== 'undefined') {
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas: document.querySelector('#bg-canvas'), alpha: true, antialias: true });
+
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.position.z = 5;
+
+            const globeGroup = new THREE.Group();
+            scene.add(globeGroup);
+
+            const textureLoader = new THREE.TextureLoader();
+            const globe = new THREE.Mesh(new THREE.SphereGeometry(1.5, 64, 64), new THREE.MeshStandardMaterial({ map: textureLoader.load('https://raw.githubusercontent.com/turban/webgl-earth/master/images/2_no_clouds_4k.jpg'), metalness: 0.2, roughness: 0.8 }));
+            globeGroup.add(globe);
+
+            const clouds = new THREE.Mesh(new THREE.SphereGeometry(1.52, 64, 64), new THREE.MeshStandardMaterial({ map: textureLoader.load('https://raw.githubusercontent.com/turban/webgl-earth/master/images/fair_clouds_4k.png'), transparent: true, opacity: 0.4 }));
+            globeGroup.add(clouds);
+            
+            const particlesCount = 8000;
+            const posArray = new Float32Array(particlesCount * 3);
+            for (let i = 0; i < particlesCount * 3; i++) { posArray[i] = (Math.random() - 0.5) * 60; }
+            const particlesGeometry = new THREE.BufferGeometry();
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const particleMesh = new THREE.Points(particlesGeometry, new THREE.PointsMaterial({ size: 0.01, color: 0xffffff, transparent: true, opacity: 0.7 }));
+            scene.add(particleMesh);
+
+            const satellites = [];
+            function createSatellite() {
+                const group = new THREE.Group();
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.2, 16), new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.9, roughness: 0.1 }));
+                body.rotation.z = Math.PI / 2;
+                const panel1 = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.1), new THREE.MeshStandardMaterial({ color: 0x003366, side: THREE.DoubleSide, metalness: 0.5, roughness: 0.5 }));
+                panel1.position.x = 0.2;
+                const panel2 = panel1.clone(); panel2.position.x = -0.2;
+                group.add(body, panel1, panel2);
+                return group;
+            }
+            for (let i = 0; i < 5; i++) {
+                const satellite = createSatellite();
+                const orbitRadius = Math.random() * 2 + 2.5;
+                const speed = (Math.random() * 0.2 + 0.1) * (Math.random() > 0.5 ? 1 : -1);
+                satellite.position.copy(new THREE.Vector3((Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)).normalize().multiplyScalar(orbitRadius));
+                const orbitAxis = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+                satellites.push({ mesh: satellite, axis: orbitAxis, speed: speed });
+                scene.add(satellite);
+            }
+
+            const asteroidCount = 150;
+            const asteroidGeometry = new THREE.DodecahedronGeometry(1, 0);
+            const asteroidMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.8, metalness: 0.2 });
+            const asteroidMesh = new THREE.InstancedMesh(asteroidGeometry, asteroidMaterial, asteroidCount);
+            const dummy = new THREE.Object3D();
+            const asteroidData = [];
+            for (let i = 0; i < asteroidCount; i++) {
+                dummy.position.set((Math.random() - 0.5) * 80, (Math.random() - 0.5) * 80, (Math.random() - 0.5) * 80);
+                const scale = Math.random() * 0.1 + 0.05;
+                dummy.scale.set(scale, scale, scale);
+                dummy.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+                dummy.updateMatrix();
+                asteroidMesh.setMatrixAt(i, dummy.matrix);
+                asteroidData.push({ velocity: new THREE.Vector3((Math.random() - 0.5) * 0.03, (Math.random() - 0.5) * 0.03, (Math.random() - 0.5) * 0.03), rotationSpeed: new THREE.Vector3(Math.random() * 0.01, Math.random() * 0.01, Math.random() * 0.01) });
+            }
+            scene.add(asteroidMesh);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); scene.add(ambientLight);
+            const pointLight = new THREE.PointLight(0x60a5fa, 1.5, 20); pointLight.position.set(2, 3, 4); scene.add(pointLight);
+            
+            const mouse = new THREE.Vector2();
+            window.addEventListener('mousemove', (event) => { mouse.x = (event.clientX / window.innerWidth) * 2 - 1; mouse.y = - (event.clientY / window.innerHeight) * 2 + 1; });
+            
+            let scrollY = window.scrollY;
+            window.addEventListener('scroll', () => { scrollY = window.scrollY; });
+
+            const clock = new THREE.Clock();
+            const animate = () => {
+                requestAnimationFrame(animate);
+                const elapsedTime = clock.getElapsedTime();
+                const deltaTime = clock.getDelta();
+
+                globe.rotation.y = .05 * elapsedTime;
+                clouds.rotation.y = .06 * elapsedTime; 
+                satellites.forEach(sat => { sat.mesh.position.applyAxisAngle(sat.axis, sat.speed * deltaTime); sat.mesh.lookAt(globe.position); });
+
+                for (let i = 0; i < asteroidCount; i++) {
+                    asteroidMesh.getMatrixAt(i, dummy.matrix);
+                    dummy.matrix.decompose(dummy.position, dummy.quaternion, dummy.scale);
+                    dummy.position.add(asteroidData[i].velocity);
+                    const distanceFromCenter = dummy.position.length();
+                    if (distanceFromCenter > 50 || distanceFromCenter < 2.5) {
+                         dummy.position.set((Math.random() - 0.5) * 80, (Math.random() - 0.5) * 80, (Math.random() - 0.5) * 80);
+                    }
+                    dummy.updateMatrix();
+                    asteroidMesh.setMatrixAt(i, dummy.matrix);
+                }
+                asteroidMesh.instanceMatrix.needsUpdate = true;
+                
+                const maxScroll = window.innerHeight * 1.5; 
+                const zoomScroll = Math.min(scrollY, maxScroll);
+                const mainContentVisible = document.getElementById('articles-page').classList.contains('hidden');
+                if (mainContentVisible) {
+                    camera.position.z = 5 - zoomScroll * 0.002;
+                }
+                
+                const parallaxX = mouse.x * 0.3;
+                const parallaxY = mouse.y * 0.3;
+                globeGroup.rotation.y += 0.05 * (parallaxX - globeGroup.rotation.y);
+                globeGroup.rotation.x += 0.05 * (-parallaxY - globeGroup.rotation.x);
+                
+                renderer.render(scene, camera);
+            };
+            animate();
+            
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(window.devicePixelRatio);
+            });
+        }
+
+        // --- UI Animations & Interactions ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const mainContainer = document.querySelector('.content-container');
+            const articlesPage = document.querySelector('#articles-page');
+            const navLinks = document.querySelectorAll('.nav-link');
+            const logoLink = document.querySelector('.logo-link');
+            const backToMainBtn = document.querySelector('#back-to-main');
+            
+            function showMainPage(scrollToId) {
+                articlesPage.classList.add('opacity-0', '-translate-y-full');
+                setTimeout(() => articlesPage.classList.add('hidden'), 500);
+                
+                mainContainer.classList.remove('hidden');
+                setTimeout(() => {
+                    mainContainer.classList.remove('opacity-0');
+                    if (scrollToId && document.getElementById(scrollToId)) {
+                        document.getElementById(scrollToId).scrollIntoView({ behavior: 'smooth' });
+                    } else {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                }, 10);
+                window.addEventListener('scroll', handleScroll);
+            }
+
+            function showArticlesPage() {
+                mainContainer.classList.add('opacity-0');
+                setTimeout(() => mainContainer.classList.add('hidden'), 500);
+                
+                articlesPage.classList.remove('hidden');
+                setTimeout(() => {
+                    articlesPage.classList.remove('opacity-0', '-translate-y-full');
+                }, 10);
+                window.removeEventListener('scroll', handleScroll);
+            }
+            
+            let scrollY = window.scrollY;
+            const handleScroll = () => { scrollY = window.scrollY; };
+            window.addEventListener('scroll', handleScroll);
+            
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const href = link.getAttribute('href');
+                    if (href === '#articles') {
+                        showArticlesPage();
+                    } else {
+                        showMainPage(href.substring(1));
+                    }
+                });
+            });
+
+            logoLink.addEventListener('click', (e) => { e.preventDefault(); showMainPage('home'); });
+            backToMainBtn.addEventListener('click', (e) => { e.preventDefault(); showMainPage('home'); });
+
+            // Card Tilt Effect
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+                    const centerX = rect.width / 2; const centerY = rect.height / 2;
+                    const rotateX = ((y - centerY) / centerY) * -8;
+                    const rotateY = ((x - centerX) / centerX) * 8;
+                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.05, 1.05, 1.05)`;
+                });
+                card.addEventListener('mouseleave', () => { card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)'; });
+            });
+
+            // Intersection Observer for scroll animations
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+            }, { threshold: 0.2 });
+            document.querySelectorAll('.scroll-animate').forEach(el => observer.observe(el));
+            
+            // Hero Text Animation
+            const title = "Shaping a Sustainable Future";
+            const titleContainer = document.querySelector('.hero-title');
+            titleContainer.innerHTML = '';
+            title.split('').forEach((letter, i) => {
+                const span = document.createElement('span');
+                span.textContent = letter === ' ' ? '\u00A0' : letter;
+                span.style.animationDelay = `${i * 0.05}s`;
+                titleContainer.appendChild(span);
+            });
+
+            // Article Modal Logic
+            const articleModal = document.getElementById('article-modal');
+            const modalContent = document.getElementById('modal-content');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+            const modalImage = document.getElementById('modal-image');
+            const modalTitle = document.getElementById('modal-title');
+            const modalText = document.getElementById('modal-text');
+            const articleCards = document.querySelectorAll('.article-card');
+
+            function openModal(card) {
+                const imgSrc = card.querySelector('img').src;
+                const title = card.querySelector('h3').textContent;
+                const text = card.querySelector('p.hidden').textContent; // Get full text
+
+                modalImage.src = imgSrc;
+                modalTitle.textContent = title;
+                modalText.innerHTML = `<p>${text.replace(/\n/g, '</p><p>')}</p>`;
+                
+                articleModal.classList.remove('hidden');
+                setTimeout(() => {
+                    articleModal.classList.remove('opacity-0');
+                    modalContent.classList.remove('scale-95');
+                }, 10);
+            }
+
+            function closeModal() {
+                modalContent.classList.add('scale-95');
+                articleModal.classList.add('opacity-0');
+                setTimeout(() => {
+                    articleModal.classList.add('hidden');
+                }, 300);
+            }
+
+            articleCards.forEach(card => card.addEventListener('click', () => openModal(card)));
+            modalCloseBtn.addEventListener('click', closeModal);
+            articleModal.addEventListener('click', (e) => {
+                if (e.target === articleModal) {
+                    closeModal();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
